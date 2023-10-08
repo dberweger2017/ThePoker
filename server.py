@@ -10,14 +10,27 @@ def handle_client(conn, addr, client_id):
     print(f'New client connected with ID {client_id}: {addr}')
 
     # Send the client their ID
-    conn.send(f'Your ID is {client_id}'.encode())
+    conn.send(f'Your ID is {client_id}\n'.encode())
 
-    # Keep listening for incoming messages from the client
+    # Prompt the client to choose a game
+    conn.send('Choose a game:\n1. Poker\n2. Blackjack\n'.encode())
+
+    # Wait for the client's response
     while True:
         data = conn.recv(1024)
         if not data:
             break
-        print(f'Received message from client {client_id}: {data.decode()}')
+        response = data.decode().strip()
+        if response == '1':
+            print(f'Client {client_id} chose Poker')
+            conn.send('You chose Poker\n'.encode())
+            break
+        elif response == '2':
+            print(f'Client {client_id} chose Blackjack')
+            conn.send('You chose Blackjack\n'.encode())
+            break
+        else:
+            conn.send('Invalid choice. Please choose again:\n1. Poker\n2. Blackjack\n'.encode())
 
     # Close the connection when the client disconnects
     print(f'Client {client_id} disconnected: {addr}')
