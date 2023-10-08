@@ -1,5 +1,5 @@
 class Player():
-    def __init__(self, playerId, balance, stage):
+    def __init__(self, playerId, balance):
         self.playerId = playerId
         self.balance = balance
 
