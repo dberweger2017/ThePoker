@@ -3,6 +3,7 @@ class Player():
         self.playerId = playerId
         self.balance = balance
         self.hand = []
+        self.isReady = False
 
     def receive(self, card):
         self.hand.append(card)

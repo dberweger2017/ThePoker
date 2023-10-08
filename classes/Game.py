@@ -39,7 +39,7 @@ class Game():
         # Store all drawn cards for each round
         all_drawn_cards = []
         
-        while True:
+        while True: 
             # Draw cards for the current player IDs
             cards = drawCardsForPlayers(player_ids)
             all_drawn_cards.append(cards)
@@ -54,13 +54,19 @@ class Game():
             # Otherwise, continue with only the players who had the highest cards
             player_ids = [card[0] for card in highest_cards]
 
+    def changeButton(self, button):
+        #Rotates the players so that the button is last
+        button_index = [player.playerId for player in self.players].index(button)
+        self.players = self.players[button_index+1:] + self.players[:button_index+1]
 
     def start(self):
         if self.stage != 0:
             print("Game already started, can't start again")
             return
         self.stage = 1
-        return self.determineButton()
+        winner, tries = self.determineButton()
+        self.changeButton(winner)
+        return winner, tries
 
     def reset(self):
         self.stage = 1

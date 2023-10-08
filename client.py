@@ -1,11 +1,28 @@
 import socket
+import sys
 
 HOST = 'localhost'
 PORT = 8000
 
 try:
+    type = sys.argv[1]
+    if type == "admin":
+        print("Admin mode")
+        mode = 1
+    else:
+        print("Client mode")
+        mode = 2
+except IndexError:
+    print("Client mode")
+    mode = 2
+
+try:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((HOST, PORT))
+        if mode == 1:
+            s.send("admin".encode())
+        else:
+            s.send("client".encode())
         while True:
             try:
                 data = s.recv(1024)
@@ -27,7 +44,7 @@ try:
                         s.send(response.encode())
                     else:
                         print("Unknown message: ", data.decode(), end="")
-                        
+
             except KeyboardInterrupt:
                 print("\nClosing connection...")
                 s.send("(I)-disconnect".encode())
