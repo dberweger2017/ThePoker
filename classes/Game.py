@@ -6,6 +6,11 @@ class Game():
         self.stage = 1
         self.deck = Deck()
         self.deck.shuffle()
+
+    def showDeck(self, showCards = True):
+        print(f"Game with {len(self.deck.cards)} cards:")
+        if showCards:
+            self.deck.show()
     
     def __str__(self):
-        return f"Players: {self.players}, Stage: {self.stage}, Deck: {self.deck}"
+        return f"Game with {len(self.players)} players, on stage: {self.stage}"

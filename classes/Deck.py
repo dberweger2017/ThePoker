@@ -22,3 +22,6 @@ class Deck:
 
     def drawCard(self):
         return self.cards.pop()
+    
+    def __str__(self):
+        return f"Cards: {self.cards}"
