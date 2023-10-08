@@ -2,6 +2,7 @@ import socket
 import threading
 from classes.Game import Game
 from classes.Player import Player
+import misc.global_var as global_var
 
 # Define the host and port to listen on
 HOST = 'localhost'
@@ -14,7 +15,7 @@ def handle_client(conn, addr, client_id):
     # Send the client their ID
     conn.send(f'(I)-Your ID is {client_id}\n'.encode())
 
-    player = Player(client_id, 1000, 0)
+    player = Player(client_id, global_var.player_init_balance, 0)
 
     # Prompt the client to choose a game
     conn.send('(C)-Choose a game:\n1. Poker\n2. Blackjack\n'.encode())
