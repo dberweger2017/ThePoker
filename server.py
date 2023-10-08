@@ -17,23 +17,6 @@ def handle_client(conn, addr, client_id):
 
     player = Player(client_id, global_var.player_init_balance, 0)
 
-    # Prompt the client to choose a game
-    conn.send('(C)-Choose a game:\n1. Poker\n2. Blackjack\n'.encode())
-
-    # Wait for the client's response
-    while True:
-        data = conn.recv(1024)
-        if data:
-            response = data.decode().strip()
-            if response == '1':
-                print(f'Client {client_id} chose Poker')
-                conn.send('You chose Poker\n'.encode())
-            elif response == '2':
-                print(f'Client {client_id} chose Blackjack')
-                conn.send('You chose Blackjack\n'.encode())
-            else:
-                conn.send('Invalid choice. Please choose again:\n1. Poker\n2. Blackjack\n'.encode())
-
     # Close the connection when the client disconnects
     print(f'Client {client_id} disconnected: {addr}')
     conn.close()
