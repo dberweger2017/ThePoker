@@ -16,4 +16,13 @@ class Card:
             print(f"{self.value} of {self.suit}")
 
     def __str__(self):
-        self.show()
+        if self.value == 1:
+            return f"A of {self.suit}"
+        elif self.value == 11:
+            return f"J of {self.suit}"
+        elif self.value == 12:
+            return f"Q of {self.suit}"
+        elif self.value == 13:
+            return f"K of {self.suit}"
+        else:
+            return f"{self.value} of {self.suit}"
