@@ -1,7 +1,7 @@
 import socket
 import threading
-from Game import Game
-from Player import Player
+from classes.Game import Game
+from classes.Player import Player
 
 # Define the host and port to listen on
 HOST = 'localhost'
