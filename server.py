@@ -14,12 +14,15 @@ players = {}
 command_queue = queue.Queue()
 clients_lock = Lock()
 
-def notify_admin(message):
+def notify_admin(message, command = False):
     global clients, clients_lock
     with clients_lock:
         for c_id, client_data in clients.items():
             if client_data['type'] == 'admin':
-                client_data['connection'].send(f"(I)-{message}\n".encode())
+                if command:
+                    client_data['connection'].send(f"(C)-{message}\n".encode())
+                else:
+                    client_data['connection'].send(f"(I)-{message}\n".encode())
 
 def handle_socket_errors(func):
     def wrapper(*args, **kwargs):
@@ -86,8 +89,15 @@ def handle_client(conn, addr, client_id):
                 conn.send("(I)-You are ready\n".encode())
                 notify_admin(f"Player {client_id} is ready.")
                 players[client_id].isReady = True
+                all_ready = True
                 for key, player in players.items():
                     notify_admin(f"{key} -> {player.isReady}")
+                    if not player.isReady:
+                        all_ready = False
+
+                if all_ready:
+                    notify_admin("All players are ready.")
+                    notify_admin("Start the game? (y/n)", command=True)
 
             elif decision == "n":
                 conn.send("(I)-You are not ready\n".encode())

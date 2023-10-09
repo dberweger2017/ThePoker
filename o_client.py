@@ -42,6 +42,7 @@ try:
                         print(data.decode(), end='')
                         response = input("Client choice: ")
                         s.send(response.encode())
+
                     else:
                         print("Unknown message: ", data.decode(), end="")
 
