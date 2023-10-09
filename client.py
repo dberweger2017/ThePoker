@@ -54,3 +54,6 @@ try:
 except ConnectionRefusedError:
     print('The server is not running.')
     exit()
+except ConnectionResetError:
+    print('The server has closed the connection.')
+    exit()
