@@ -104,12 +104,16 @@ def check_all_players_ready():
         notify_admin("All players are ready.")
         notify_admin("Start the game? (y/n)", command=True)
 
+def startGame():
+    game = Game(list(players.values()))
+    winner, cards = game.start()
+    print(winner, cards)
+
 def process_admin_command(command):
     if command == "start game":
         print("Game is starting...")
         notify_players("Game is starting...")
-        game = Game(players.values())
-        game.start()
+        startGame()
         reset_players()
     elif command.startswith("say"):
         for client in clients.values():
