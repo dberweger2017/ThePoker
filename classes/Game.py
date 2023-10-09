@@ -24,6 +24,9 @@ class Game():
         if showCards:
             self.deck.show()
 
+    def getOrder(self):
+        return [player.playerId for player in self.players]
+
     def determineButton(self):
         def drawCardsForPlayers(player_ids):
             return [[player_id, self.deck.drawCard()] for player_id in player_ids]

@@ -104,6 +104,10 @@ def check_all_players_ready():
         notify_admin("All players are ready.")
         notify_admin("Start the game? (y/n)", command=True)
 
+def runGame():
+    game = startGame()
+    
+
 def startGame():
     game = Game(list(players.values()))
     winner, cards = game.start()
@@ -111,17 +115,25 @@ def startGame():
     for round in cards:
         for player_id, card in round:
             notify_player(player_id, f"Your card is {card}")
-        time.sleep(3)
+            time.sleep(2)
+
+        for player_id, card in round:
+            notify_players(f"{player_id} got card {card}")
+            time.sleep(1)
+
+    time.sleep(3)
     notify_players(f"Winner is {winner}!!")
     notify_player(winner, "You won the game!!")
-
-    print(winner, cards)
+    time.sleep(1)
+    notify_players(f"The order of the game is {' -> '.join([str(item) for item in game.getOrder()])}")
+    game.reset()
+    return game
 
 def process_admin_command(command):
     if command == "start game":
         print("Game is starting...")
         notify_players("Game is starting...")
-        startGame()
+        runGame()
         reset_players()
     elif command.startswith("say"):
         for client in clients.values():
