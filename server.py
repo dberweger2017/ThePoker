@@ -22,6 +22,16 @@ def notify_admin(message, command=False):
                 msg = f"(C)-{message}\n" if command else f"(I)-{message}\n"
                 client_data['connection'].send(msg.encode())
 
+def notify_players(message):
+    with clients_lock:
+        for client_data in clients.values():
+            if client_data['type'] == 'client':
+                client_data['connection'].send(f"(I)-{message}\n".encode())
+
+def notify_player(client_id, message):
+    with clients_lock:
+        clients[client_id]['connection'].send(f"(I)-{message}\n".encode())
+
 def handle_socket_errors(func):
     def wrapper(client_id, *args, **kwargs):
         try:
@@ -74,7 +84,6 @@ def handle_player(conn, client_id):
         decision = receive_data(conn)
         if decision == "y":
             conn.send("(I)-You are ready\n".encode())
-            notify_admin(f"Player {client_id} is ready.")
             players[client_id].isReady = True
             check_all_players_ready()
             break
@@ -97,10 +106,18 @@ def check_all_players_ready():
 
 def process_admin_command(command):
     if command == "start game":
-        command_queue.put("start game")
+        print("Game is starting...")
+        notify_players("Game is starting...")
+        game = Game(players.values())
+        game.start()
+        reset_players()
     elif command.startswith("say"):
         for client in clients.values():
             client['connection'].send(f"(I)-{command[4:]}\n".encode())
+
+def reset_players():
+    global players
+    players = {}
 
 if __name__ == "__main__":
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

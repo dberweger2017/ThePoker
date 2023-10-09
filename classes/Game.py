@@ -57,7 +57,7 @@ class Game():
     def changeButton(self, button):
         #Rotates the players so that the button is last
         button_index = [player.playerId for player in self.players].index(button)
-        self.players = self.players[button_index+1:] + self.players[:button_index+1]
+        self.players = self.plclearayers[button_index+1:] + self.players[:button_index+1]
 
     def start(self):
         if self.stage != 0:

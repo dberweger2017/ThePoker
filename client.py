@@ -16,10 +16,16 @@ def handle_data(s, data, mode):
                 print("Server has closed the connection.")
                 s.close()
                 return True
-            print("Whis was information")
         elif line.startswith("(C)"):
-            response = input("Client choice: ")
-            s.send(response.encode())
+            if line == "(C)-Start the game? (y/n)":
+                response = input("Client choice: ")
+                if response == "y":
+                    s.send("start game".encode())
+                else:
+                    print("Game cancelled.")
+            else:
+                response = input("Client choice: ")
+                s.send(response.encode())
         else:
             print(f"Unknown message: {line}", end="")
     return False
