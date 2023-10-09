@@ -107,6 +107,14 @@ def check_all_players_ready():
 def startGame():
     game = Game(list(players.values()))
     winner, cards = game.start()
+
+    for round in cards:
+        for player_id, card in round:
+            notify_player(player_id, f"Your card is {card}")
+        time.sleep(3)
+    notify_players(f"Winner is {winner}!!")
+    notify_player(winner, "You won the game!!")
+
     print(winner, cards)
 
 def process_admin_command(command):
