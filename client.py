@@ -8,18 +8,20 @@ def get_mode():
     return "admin" if sys.argv[1:2] == ["admin"] else "client"
 
 def handle_data(s, data, mode):
-    decoded_data = data.decode().strip()
-    print(f"{decoded_data}\n", end='')
-    if decoded_data.startswith("(I)"):
-        if decoded_data == "(I)-disconnect":
-            print("Server has closed the connection.")
-            s.close()
-            return True
-    elif decoded_data.startswith("(C)") and mode == "client":
-        response = input("Client choice: ")
-        s.send(response.encode())
-    else:
-        print(f"Unknown message: {decoded_data}", end="")
+    decoded_data = data.decode().strip().split("\n")
+    for line in decoded_data:
+        print(line)
+        if line.startswith("(I)"):
+            if line == "(I)-disconnect":
+                print("Server has closed the connection.")
+                s.close()
+                return True
+            print("Whis was information")
+        elif line.startswith("(C)"):
+            response = input("Client choice: ")
+            s.send(response.encode())
+        else:
+            print(f"Unknown message: {line}", end="")
     return False
 
 def main():
