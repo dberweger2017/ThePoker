@@ -4,6 +4,7 @@ class Player():
         self.balance = balance
         self.hand = []
         self.isReady = False
+        self.bet = 0
 
     def receive(self, card):
         self.hand.append(card)

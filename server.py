@@ -15,6 +15,10 @@ players = {}
 command_queue = queue.Queue()
 clients_lock = Lock()
 
+current_turn = None
+current_phase = ""
+game = None
+
 def notify_admin(message, command=False):
     with clients_lock:
         for client_data in clients.values():
@@ -74,7 +78,26 @@ def handle_admin(conn):
         command = receive_data(conn)
         process_admin_command(command)
 
+def proceed_to_next_turn():
+    print("Passing to new turn")
+    global current_turn
+    global game
+    player_ids = game.getOrder()
+    current_index = player_ids.index(current_turn)
+
+    # Check if all players have made their bet
+    if current_index + 1 == len(player_ids):
+        # Next phase logic
+        print("Phase ended")
+        pass
+    else:
+        current_turn = player_ids[current_index + 1]
+        notify_player(current_turn, "(C)-How much do you want to bet?")
+
+
 def handle_player(conn, client_id):
+    global current_phase, current_turn, game
+
     notify_admin(f"Player {client_id} has connected.")
     players[client_id] = Player(client_id, global_var.player_init_balance)
     
@@ -96,6 +119,15 @@ def handle_player(conn, client_id):
         else:
             conn.send("(I)-Unknown decision\n".encode())
             conn.send("(C)-Are you ready? (y/n)\n".encode())
+    
+    while current_phase == "bet":
+        print("Running bet phase")
+        global current_turn
+        if client_id == current_turn:
+            conn.send("(C)-How much do you want to bet?\n".encode())
+            bet = receive_data(conn)
+            notify_players(f"Player {client_id} has bet {bet}")
+            proceed_to_next_turn()
 
 def check_all_players_ready():
     all_ready = all(player.isReady for player in players.values())
@@ -105,10 +137,19 @@ def check_all_players_ready():
         notify_admin("Start the game? (y/n)", command=True)
 
 def runGame():
-    game = startGame()
-    
+    global current_turn
+    global game
+    startGame()
+    players = game.getOrder()
+    current_turn = players[0]
+    notify_players(f"Current turn: {current_turn}")
+    print(f"Current turn: {current_turn}")
+    current_phase = "bet"
+    notify_players(f"Game in {current_phase} mode")
+    print(f"Game in {current_phase} mode")
 
 def startGame():
+    global game
     game = Game(list(players.values()))
     winner, cards = game.start()
 
@@ -127,7 +168,6 @@ def startGame():
     time.sleep(1)
     notify_players(f"The order of the game is {' -> '.join([str(item) for item in game.getOrder()])}")
     game.reset()
-    return game
 
 def process_admin_command(command):
     if command == "start game":

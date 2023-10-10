@@ -6,6 +6,7 @@ class Game():
         self.stage = 0
         self.deck = Deck()
         self.deck.shuffle()
+        self.pot = 0
 
     def getStage(self):
         if self.stage == 1:
