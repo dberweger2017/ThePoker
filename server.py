@@ -6,6 +6,7 @@ from threading import Lock
 from classes.Game import Game
 from classes.Player import Player
 import misc.global_var as global_var
+import sys
 
 HOST = 'localhost'
 PORT = 8000
@@ -185,8 +186,13 @@ def reset_players():
 
 if __name__ == "__main__":
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((HOST, PORT))
-    server_socket.listen()
+    try:
+        server_socket.bind((HOST, PORT))
+        server_socket.listen()
+    except OSError:
+        print("Server is already running.")
+        print("Exiting...")
+        sys.exit(0)
 
     print(f'Server listening on {HOST}:{PORT}')
 
