@@ -17,7 +17,7 @@ command_queue = queue.Queue()
 clients_lock = Lock()
 
 current_turn = None
-current_phase = ""
+current_phase = "waiting"
 game = None
 
 def notify_admin(message, command=False):
@@ -90,21 +90,21 @@ def proceed_to_next_turn():
     if current_index + 1 == len(player_ids):
         # Next phase logic
         print("Phase ended")
-        pass
+        return
     else:
         current_turn = player_ids[current_index + 1]
-        notify_player(current_turn, "(C)-How much do you want to bet?")
 
 
 def handle_player(conn, client_id):
     global current_phase, current_turn, game
-
-    notify_admin(f"Player {client_id} has connected.")
-    players[client_id] = Player(client_id, global_var.player_init_balance)
+    print("i. Running handle_player on phase", current_phase)
     
-    conn.send("(C)-Are you ready? (y/n)\n".encode())
+    if current_phase == "waiting":
+        notify_admin(f"Player {client_id} has connected.")
+        players[client_id] = Player(client_id, global_var.player_init_balance)
+        conn.send("(C)-Are you ready? (y/n)\n".encode())
     
-    while True:
+    while current_phase == "waiting":
         decision = receive_data(conn)
         if decision == "y":
             conn.send("(I)-You are ready\n".encode())
@@ -120,9 +120,11 @@ def handle_player(conn, client_id):
         else:
             conn.send("(I)-Unknown decision\n".encode())
             conn.send("(C)-Are you ready? (y/n)\n".encode())
+
+    if current_phase == "waiting":
+        print("Running bet phase")
     
     while current_phase == "bet":
-        print("Running bet phase")
         global current_turn
         if client_id == current_turn:
             conn.send("(C)-How much do you want to bet?\n".encode())
@@ -138,16 +140,17 @@ def check_all_players_ready():
         notify_admin("Start the game? (y/n)", command=True)
 
 def runGame():
-    global current_turn
-    global game
+    global current_turn, game, current_phase
     startGame()
     players = game.getOrder()
     current_turn = players[0]
     notify_players(f"Current turn: {current_turn}")
     print(f"Current turn: {current_turn}")
     current_phase = "bet"
-    notify_players(f"Game in {current_phase} mode")
     print(f"Game in {current_phase} mode")
+    # Run handle_player for each player
+    for player_id in players:
+        handle_player(clients[player_id]['connection'], player_id)
 
 def startGame():
     global game
@@ -157,7 +160,7 @@ def startGame():
     for round in cards:
         for player_id, card in round:
             notify_player(player_id, f"Your card is {card}")
-            time.sleep(2)
+        time.sleep(2)
 
         for player_id, card in round:
             notify_players(f"{player_id} got card {card}")
@@ -165,7 +168,7 @@ def startGame():
 
     time.sleep(3)
     notify_players(f"Winner is {winner}!!")
-    notify_player(winner, "You won the game!!")
+    notify_player(winner, "You are the Button!!")
     time.sleep(1)
     notify_players(f"The order of the game is {' -> '.join([str(item) for item in game.getOrder()])}")
     game.reset()
@@ -189,8 +192,9 @@ if __name__ == "__main__":
     try:
         server_socket.bind((HOST, PORT))
         server_socket.listen()
-    except OSError:
-        print("Server is already running.")
+    except OSError as e:
+        print("Server is probably running.")
+        print(e)
         print("Exiting...")
         sys.exit(0)
 
