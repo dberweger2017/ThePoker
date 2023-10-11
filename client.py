@@ -1,5 +1,9 @@
 import socket
 import sys
+import os
+
+# clear the terminal
+os.system('cls' if os.name == 'nt' else 'clear')
 
 HOST = 'localhost'
 PORT = 8000
