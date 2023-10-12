@@ -240,6 +240,10 @@ def handle_game():
         next_phase()
         
     if current_phase == "bet":
+        for player in game.players:
+            player.hand.append(game.deck.drawCard())
+            player.hand.append(game.deck.drawCard())
+            notify_player(player.playerId, f"Your hand is {' '.join([str(card) for card in player.hand])}")
         current_turn = game.getOrder()[0]
         print(game.smallBlind, game.bigBlind)
         pass
