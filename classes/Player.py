@@ -5,6 +5,7 @@ class Player():
         self.hand = []
         self.isReady = False
         self.bet = 0
+        self.type = "player" # player, smallblind, bigblind or button
 
     def receive(self, card):
         self.hand.append(card)

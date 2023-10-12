@@ -14,13 +14,21 @@ def get_mode():
 def handle_data(s, data, mode):
     decoded_data = data.decode().strip().split("\n")
     for line in decoded_data:
-        print(line)
-        if line.startswith("(I)"):
+        if line == " "*len(line):
+            continue
+        # TODO: make this more elegant
+        if line != "(I)-n":
+            print(line)
+        if line.startswith("(I)" or line.startswith(" (I)")):
             if line == "(I)-disconnect":
                 print("Server has closed the connection.")
                 s.close()
                 return True
-        elif line.startswith("(C)"):
+            elif line == "(I)-clear":
+                os.system('cls' if os.name == 'nt' else 'clear')
+            elif line == "(I)-n":
+                print("\n")
+        elif line.startswith("(C)") or line.startswith(" (C)"):
             if line == "(C)-Start the game? (y/n)":
                 response = input("Client choice: ")
                 if response == "y":

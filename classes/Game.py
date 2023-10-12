@@ -7,6 +7,17 @@ class Game():
         self.deck = Deck()
         self.deck.shuffle()
         self.pot = 0
+        self.round = 1
+
+        self.blindBet = 10
+        self.minTableBet = 0
+
+        self.smallBlind = None
+        self.bigBlind = None
+
+    def getPlayerIndex(self, playerId):
+        # returns the index of the player with the given playerId
+        return [player.playerId for player in self.players].index(playerId)
 
     def getStage(self):
         if self.stage == 1:
@@ -62,6 +73,12 @@ class Game():
         #Rotates the players so that the button is last
         button_index = [player.playerId for player in self.players].index(button)
         self.players = self.players[button_index+1:] + self.players[:button_index+1]
+        
+        self.players[0].type = "smallblind"
+        self.players[1].type = "bigblind"
+
+        self.smallBlind = self.players[0].playerId
+        self.bigBlind = self.players[1].playerId
 
     def start(self):
         if self.stage != 0:
