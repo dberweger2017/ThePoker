@@ -4,23 +4,21 @@ from tkinter import ttk, Text, Scrollbar
 import socket
 import threading
 import sys
+import names
 
 HOST = 'localhost'
 PORT = 8000
 
 s = None
-balances = {
-    "Davide": 100,
-    "Giuseppe": 100,
-    "Giovanni": 100,
-    "Francesco": 100
-}
+player_name = None
+balances = {}
 
 def get_mode():
     return "admin" if sys.argv[1:2] == ["admin"] else "client"
 
 def socket_client():
     global s
+
     mode = get_mode()
     print(f"{mode.capitalize()} mode")
 
@@ -40,8 +38,28 @@ def socket_client():
         chat_display.insert(tk.END, "The server has closed the connection.\n")
 
 def handle_data(s, data):
-    chat_display.insert(tk.END, f"Server: {data}\n")
-    chat_display.yview(tk.END)
+    global player_name
+    decoded_data = data.strip().split("\n")
+    for line in decoded_data:
+        if line == " "*len(line):
+            continue
+        if line.startswith("(D)") or line.startswith(" (D)"):
+            # Server is requesting data, send it quitely in the background
+            if line == "(D)-name":
+                s.send(player_name.encode())
+            else:
+                print(f"Unknown data request: {line}")
+        elif line.startswith("(I)") or line.startswith(" (I)"):
+            # The server is showing information, display it to the user
+            line = line.replace("(I)", "").strip()
+            chat_display.insert(tk.END, f"Server: {data}\n")
+            chat_display.yview(tk.END)
+        elif line.startswith("(C)") or line.startswith(" (C)"):
+            # The server is requesting input from the user
+            line = line.replace("(C)", "").strip()
+            # For now, just show the information to the user
+            chat_display.insert(tk.END, f"Server: {data}\n")
+            chat_display.yview(tk.END)
 
 def on_fold():
     print("Fold")
@@ -53,8 +71,7 @@ def on_raise():
     raise_amount = raise_slider.get()
     print(f"Raise by {raise_amount}")
 
-def change_bg_color():
-    new_color = color_entry.get()
+def change_bg_color(new_color):
     main_frame.config(bg=new_color)
 
 def send_message():
@@ -74,11 +91,13 @@ def send_message():
 def save_name():
     global player_name
     player_name = name_entry.get()
+    threading.Thread(target=socket_client).start()
     player_label.config(text=player_name)
+    name_label.grid_remove()
     name_entry.grid_remove()
     save_button.grid_remove()
-    ready_label.grid(row=0, column=0, columnspan=2)  # Display "Are you ready?" label
-    yes_button.grid(row=0, column=2)  # Display "Yes" button
+    ready_label.grid(row=0, column=0, columnspan=2)
+    yes_button.grid(row=0, column=2)
 
 def start_game():
     global s
@@ -92,10 +111,13 @@ root = tk.Tk()
 root.title("Poker Game")
 root.geometry("600x680")
 
-# Start Menu Widgets
+# Enter your name
+name_label = ttk.Label(root, text="Enter your name:")
+name_label.grid(row=0, column=0, sticky=tk.W)
+
 name_entry = ttk.Entry(root, width=20)
-name_entry.grid(row=0, column=0)
-name_entry.insert(0, "Enter your name")
+name_entry.grid(row=1, column=0)
+name_entry.insert(0, f"{names.get_first_name()}")
 
 save_button = ttk.Button(root, text="Save", command=save_name)
 save_button.grid(row=0, column=1)
@@ -106,10 +128,10 @@ yes_button = ttk.Button(root, text="Yes", command=start_game)
 # Create frames
 main_frame = tk.Frame(root, bg="white", padx=10, pady=10)
 main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-main_frame.grid_remove()  # Hide the main frame initially
+main_frame.grid_remove()
 
 # Label for Player name, Pot, and Balance
-player_label = ttk.Label(main_frame, text="Davide")
+player_label = ttk.Label(main_frame, text=player_name)
 player_label.grid(row=0, column=0, sticky=tk.W)
 
 pot_label = ttk.Label(main_frame, text="Pot: 100")
@@ -174,7 +196,7 @@ send_button.grid(row=5, column=3, sticky=tk.W)
 
 # Group widgets by their function
 input_bar_widgets = [chat_input, send_button]
-action_buttons = [call_button, raise_button, fold_button]
+action_buttons = [call_button, raise_button, raise_slider, fold_button]
 
 def toggle_visibility():
     new_state = 'normal' if fold_button.winfo_viewable() == 0 else 'hidden'
@@ -184,22 +206,10 @@ def toggle_visibility():
         else:
             widget.grid()
 
-# Button to toggle visibility
-toggle_button = ttk.Button(root, text="Toggle Visibility", command=toggle_visibility)
-toggle_button.grid(row=1, column=0, sticky=tk.W)
-
 # Button to change background color and a text field for the color
-color_entry = ttk.Entry(main_frame, width=10)
-color_entry.grid(row=6, column=0, sticky=(tk.W, tk.E))
-color_entry.insert(0, "white")
 change_color_button = ttk.Button(main_frame, text="Change BG Color", command=change_bg_color)
 change_color_button.grid(row=6, column=1, sticky=tk.W)
 
 ## End of GUI
 
-if __name__ == "__main__":
-    # Start socket client
-    threading.Thread(target=socket_client).start()
-
-    # Run the Tkinter event loop
-    root.mainloop()
+root.mainloop()

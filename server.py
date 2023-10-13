@@ -61,6 +61,7 @@ def handle_client(conn, addr, client_id):
     conn.send(f'(I)-Your ID is {client_id}\n'.encode())
 
     client_type = receive_data(conn)
+    
     with clients_lock:
         clients[client_id] = {'connection': conn, 'type': client_type}
 
@@ -69,8 +70,7 @@ def handle_client(conn, addr, client_id):
     elif client_type == "client":
         handle_player(conn, client_id)
     else:
-        print(f"Unknown type connected with ID {client_id}")
-        conn.send("(I)-Unknown type\n".encode())
+        print(f"Unknown client type {client_type}")
         conn.close()
 
 def process_admin_command(command):
@@ -123,6 +123,8 @@ def handle_player(conn, client_id):
                     conn.send("(I)-You are ready\n".encode())
                     notify_admin(f"Player {client_id} is ready.")
                     players[client_id].isReady = True
+                    conn.send("(D)-name\n".encode())
+                    players[client_id].name = receive_data(conn)
                     continue
 
                 elif decision == "n":
