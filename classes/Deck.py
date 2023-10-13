@@ -7,9 +7,11 @@ class Deck:
         self.build()
 
     def build(self):
+        i = 0
         for s in ["Spades", "Clubs", "Diamonds", "Hearts"]:
-            for v in range(1, 14):
-                self.cards.append(Card(s, v))
+            for v in range(2, 15):
+                self.cards.append(Card(s, v, i))
+                i += 1
 
     def show(self):
         for c in self.cards:

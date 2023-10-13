@@ -1,10 +1,11 @@
 class Card:
-    def __init__(self, suit, val):
+    def __init__(self, suit, val, id):
         self.suit = suit
-        self.value = val   
+        self.value = val
+        self.id
 
     def show(self):
-        if self.value == 1:
+        if self.value == 14:
             print(f"A of {self.suit}")
         elif self.value == 11:
             print(f"J of {self.suit}")
@@ -16,7 +17,7 @@ class Card:
             print(f"{self.value} of {self.suit}")
 
     def __str__(self):
-        if self.value == 1:
+        if self.value == 14:
             return f"A of {self.suit}"
         elif self.value == 11:
             return f"J of {self.suit}"

@@ -5,6 +5,7 @@ import socket
 import threading
 import sys
 import names
+import os
 
 HOST = 'localhost'
 PORT = 8000
@@ -12,6 +13,8 @@ PORT = 8000
 s = None
 player_name = None
 balances = {}
+cards_on_table = [10, 13, 12]
+cards_for_player = []
 
 def get_mode():
     return "admin" if sys.argv[1:2] == ["admin"] else "client"
@@ -142,26 +145,28 @@ for idx, (name, balance) in enumerate(balances.items()):
     balance_label["text"] += f"\n{name}: {balance}"
 balance_label.grid(row=0, column=4, sticky=tk.E)
 
-def update_ui(balances):
+def update_balances(balances):
     balance_label["text"] = "Balances:"
     for idx, (name, balance) in enumerate(balances.items()):
         balance_label["text"] += f"\n{name}: {balance}"
 
-# Load and resize Card Image
-original_img = Image.open("img/background.png")
-width, height = original_img.size
-new_img = original_img.resize((width // 5, height // 5), Image.ANTIALIAS)
-card_img = ImageTk.PhotoImage(new_img)
+def update_cards(cards, row, starting_column=0):
+        for idx, card in enumerate(cards):
+            card_img_path = f"img/{card}.png"
+            if not os.path.exists(card_img_path):
+                print(f"Card image {card_img_path} not found!")
+                continue
+            original_card_img = Image.open(card_img_path)
+            card_img = ImageTk.PhotoImage(original_card_img.resize((width // 5, height // 5), Image.ANTIALIAS))
+            card_label = ttk.Label(main_frame, image=card_img)
+            card_label.image = card_img  # Keep a reference
+            card_label.grid(row=row, column=starting_column + idx)
 
-# Display 5 community cards
-community_cards = [ttk.Label(main_frame, image=card_img) for _ in range(5)]
-for idx, lbl in enumerate(community_cards):
-    lbl.grid(row=1, column=idx)
-
-# Display 2 hole cards
-hole_cards = [ttk.Label(main_frame, image=card_img) for _ in range(2)]
-for idx, lbl in enumerate(hole_cards):
-    lbl.grid(row=2, column=idx, columnspan=2)
+def update_ui():
+    global balances, cards_on_table, cards_for_player
+    update_balances(balances)
+    update_cards(cards_on_table, 1)
+    update_cards(cards_for_player, 2)
 
 # Chat display
 chat_display = Text(main_frame, wrap=tk.WORD, width=50, height=10)
@@ -212,4 +217,6 @@ change_color_button.grid(row=6, column=1, sticky=tk.W)
 
 ## End of GUI
 
+# update_ui() every 100ms to update the UI
+root.after(100, update_ui)
 root.mainloop()
