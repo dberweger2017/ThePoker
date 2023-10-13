@@ -121,6 +121,7 @@ def handle_player(conn, client_id):
                 decision = receive_data(conn)
                 if decision == "y":
                     conn.send("(I)-You are ready\n".encode())
+                    notify_admin(f"Player {client_id} is ready.")
                     players[client_id].isReady = True
                     continue
 

@@ -41,9 +41,8 @@ def socket_client():
 
 def handle_data(s, data):
     chat_display.insert(tk.END, f"Server: {data}\n")
-    chat_display.yview(tk.END)  # Scroll to the end
+    chat_display.yview(tk.END)
 
-# Poker Action functions
 def on_fold():
     print("Fold")
 
@@ -59,7 +58,7 @@ def change_bg_color():
     main_frame.config(bg=new_color)
 
 def send_message():
-    global s  # Use the global variable
+    global s
     message = chat_input.get()
     chat_display.insert(tk.END, f"You: {message}\n")
     chat_input.delete(0, tk.END)
@@ -70,13 +69,44 @@ def send_message():
         except:
             chat_display.insert(tk.END, "Failed to send message. Connection might be closed.\n")
 
+## GUI
+
+def save_name():
+    global player_name
+    player_name = name_entry.get()
+    player_label.config(text=player_name)
+    name_entry.grid_remove()
+    save_button.grid_remove()
+    ready_label.grid(row=0, column=0, columnspan=2)  # Display "Are you ready?" label
+    yes_button.grid(row=0, column=2)  # Display "Yes" button
+
+def start_game():
+    global s
+    s.send("y".encode())
+    ready_label.grid_remove()
+    yes_button.grid_remove()
+    main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))  # Show the main frame
+
 # Initialize Tkinter window
 root = tk.Tk()
 root.title("Poker Game")
+root.geometry("600x680")
+
+# Start Menu Widgets
+name_entry = ttk.Entry(root, width=20)
+name_entry.grid(row=0, column=0)
+name_entry.insert(0, "Enter your name")
+
+save_button = ttk.Button(root, text="Save", command=save_name)
+save_button.grid(row=0, column=1)
+
+ready_label = ttk.Label(root, text="Are you ready to start the game?")
+yes_button = ttk.Button(root, text="Yes", command=start_game)
 
 # Create frames
 main_frame = tk.Frame(root, bg="white", padx=10, pady=10)
 main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+main_frame.grid_remove()  # Hide the main frame initially
 
 # Label for Player name, Pot, and Balance
 player_label = ttk.Label(main_frame, text="Davide")
@@ -165,8 +195,11 @@ color_entry.insert(0, "white")
 change_color_button = ttk.Button(main_frame, text="Change BG Color", command=change_bg_color)
 change_color_button.grid(row=6, column=1, sticky=tk.W)
 
-# Start socket client
-threading.Thread(target=socket_client).start()
+## End of GUI
 
-# Run the Tkinter event loop
-root.mainloop()
+if __name__ == "__main__":
+    # Start socket client
+    threading.Thread(target=socket_client).start()
+
+    # Run the Tkinter event loop
+    root.mainloop()
