@@ -3,22 +3,41 @@ import tkinter as tk
 from tkinter import ttk, Text, Scrollbar
 import socket
 import threading
+import sys
 
 HOST = 'localhost'
 PORT = 8000
 
+s = None
+balances = {
+    "Davide": 100,
+    "Giuseppe": 100,
+    "Giovanni": 100,
+    "Francesco": 100
+}
+
+def get_mode():
+    return "admin" if sys.argv[1:2] == ["admin"] else "client"
+
 def socket_client():
+    global s
+    mode = get_mode()
+    print(f"{mode.capitalize()} mode")
+
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((HOST, PORT))
+        s.send(mode.encode())
         while True:
             data = s.recv(1024)
             if data:
                 handle_data(s, data.decode())
     except ConnectionRefusedError:
         print("The server is not running.")
+        chat_display.insert(tk.END, "The server is not running.\n")
     except ConnectionResetError:
         print("The server has closed the connection.")
+        chat_display.insert(tk.END, "The server has closed the connection.\n")
 
 def handle_data(s, data):
     chat_display.insert(tk.END, f"Server: {data}\n")
@@ -39,17 +58,17 @@ def change_bg_color():
     new_color = color_entry.get()
     main_frame.config(bg=new_color)
 
-def toggle_visibility():
-    new_state = 'normal' if fold_button.winfo_viewable() == 0 else 'hidden'
-    for widget in main_frame.winfo_children():
-        if widget not in community_cards and widget not in hole_cards and widget != chat_display:
-            widget.grid_remove() if new_state == 'hidden' else widget.grid()
-
 def send_message():
+    global s  # Use the global variable
     message = chat_input.get()
     chat_display.insert(tk.END, f"You: {message}\n")
     chat_input.delete(0, tk.END)
     chat_display.yview(tk.END)
+    if s:
+        try:
+            s.send(message.encode())
+        except:
+            chat_display.insert(tk.END, "Failed to send message. Connection might be closed.\n")
 
 # Initialize Tkinter window
 root = tk.Tk()
@@ -66,12 +85,15 @@ player_label.grid(row=0, column=0, sticky=tk.W)
 pot_label = ttk.Label(main_frame, text="Pot: 100")
 pot_label.grid(row=0, column=2, sticky=tk.EW)
 
-balance_label = ttk.Label(main_frame, text="Balance: 1000")
+balance_label = ttk.Label(main_frame, text="Balances:")
+for idx, (name, balance) in enumerate(balances.items()):
+    balance_label["text"] += f"\n{name}: {balance}"
 balance_label.grid(row=0, column=4, sticky=tk.E)
 
-# Button to toggle visibility
-toggle_button = ttk.Button(root, text="Toggle Visibility", command=toggle_visibility)
-toggle_button.grid(row=1, column=0, sticky=tk.W)
+def update_ui(balances):
+    balance_label["text"] = "Balances:"
+    for idx, (name, balance) in enumerate(balances.items()):
+        balance_label["text"] += f"\n{name}: {balance}"
 
 # Load and resize Card Image
 original_img = Image.open("img/background.png")
@@ -119,6 +141,22 @@ chat_input = ttk.Entry(main_frame, width=30)
 chat_input.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E))
 send_button = ttk.Button(main_frame, text="Send", command=send_message)
 send_button.grid(row=5, column=3, sticky=tk.W)
+
+# Group widgets by their function
+input_bar_widgets = [chat_input, send_button]
+action_buttons = [call_button, raise_button, fold_button]
+
+def toggle_visibility():
+    new_state = 'normal' if fold_button.winfo_viewable() == 0 else 'hidden'
+    for widget in input_bar_widgets + action_buttons:
+        if new_state == 'hidden':
+            widget.grid_remove()
+        else:
+            widget.grid()
+
+# Button to toggle visibility
+toggle_button = ttk.Button(root, text="Toggle Visibility", command=toggle_visibility)
+toggle_button.grid(row=1, column=0, sticky=tk.W)
 
 # Button to change background color and a text field for the color
 color_entry = ttk.Entry(main_frame, width=10)
