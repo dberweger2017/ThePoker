@@ -1,7 +1,30 @@
 from PIL import Image, ImageTk
 import tkinter as tk
 from tkinter import ttk, Text, Scrollbar
+import socket
+import threading
 
+HOST = 'localhost'
+PORT = 8000
+
+def socket_client():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((HOST, PORT))
+        while True:
+            data = s.recv(1024)
+            if data:
+                handle_data(s, data.decode())
+    except ConnectionRefusedError:
+        print("The server is not running.")
+    except ConnectionResetError:
+        print("The server has closed the connection.")
+
+def handle_data(s, data):
+    chat_display.insert(tk.END, f"Server: {data}\n")
+    chat_display.yview(tk.END)  # Scroll to the end
+
+# Poker Action functions
 def on_fold():
     print("Fold")
 
@@ -26,7 +49,7 @@ def send_message():
     message = chat_input.get()
     chat_display.insert(tk.END, f"You: {message}\n")
     chat_input.delete(0, tk.END)
-    chat_display.yview(tk.END)  # Scroll to the end
+    chat_display.yview(tk.END)
 
 # Initialize Tkinter window
 root = tk.Tk()
@@ -103,6 +126,9 @@ color_entry.grid(row=6, column=0, sticky=(tk.W, tk.E))
 color_entry.insert(0, "white")
 change_color_button = ttk.Button(main_frame, text="Change BG Color", command=change_bg_color)
 change_color_button.grid(row=6, column=1, sticky=tk.W)
+
+# Start socket client
+threading.Thread(target=socket_client).start()
 
 # Run the Tkinter event loop
 root.mainloop()
