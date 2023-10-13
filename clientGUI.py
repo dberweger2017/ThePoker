@@ -157,6 +157,7 @@ def update_cards(cards, row, starting_column=0):
                 print(f"Card image {card_img_path} not found!")
                 continue
             original_card_img = Image.open(card_img_path)
+            width, height = original_card_img.size
             card_img = ImageTk.PhotoImage(original_card_img.resize((width // 5, height // 5), Image.ANTIALIAS))
             card_label = ttk.Label(main_frame, image=card_img)
             card_label.image = card_img  # Keep a reference
