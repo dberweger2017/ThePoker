@@ -7,10 +7,12 @@ class Player():
         self.bet = 0
         self.type = "player" # player, smallblind, bigblind or button
         self.name = None
+        self.called = False
+        self.folded = False
 
     def receive(self, card):
         self.hand.append(card)
 
     def __str__(self):
-        return f"Player ID: {self.playerId}, Balance: {self.balance}, Stage: {self.stage}"
+        return self.name
 

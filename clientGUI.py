@@ -13,8 +13,9 @@ PORT = 8000
 s = None
 player_name = None
 balances = {}
-cards_on_table = [10, 13, 12]
+cards_on_table = []
 cards_for_player = []
+pot = 0
 
 def get_mode():
     return "admin" if sys.argv[1:2] == ["admin"] else "client"
@@ -41,15 +42,43 @@ def socket_client():
         chat_display.insert(tk.END, "The server has closed the connection.\n")
 
 def handle_data(s, data):
-    global player_name
+    global player_name, cards_for_player, cards_on_table, balances, pot
     decoded_data = data.strip().split("\n")
+    print(decoded_data)
     for line in decoded_data:
         if line == " "*len(line):
             continue
-        if line.startswith("(D)") or line.startswith(" (D)"):
+        if line.startswith("(D)"):
             # Server is requesting data, send it quitely in the background
-            if line == "(D)-name":
+            line = line.replace("(D)-", "").strip()
+            print(f"Data request: {line}")
+            if line == "name":
                 s.send(player_name.encode())
+            #if the line contains :
+            elif ":" in line:
+                line = line.split(":")
+                if line[0] == "hand":
+                    if line[1] == "-1":
+                        print("Resetting cards for player")
+                        cards_for_player = []
+                    else:
+                        cards_for_player.append(line[1])
+                elif line[0] == "table":
+                    if line[1] == "-1":
+                        print("Resetting cards on table")
+                        cards_on_table = []
+                    else:
+                        cards_on_table.append(line[1])
+                    print(cards_on_table)
+                update_ui()
+            elif "=" in line:
+                line = line.split("=")
+                balances[line[0]] = line[1]
+                update_ui()
+            elif ">" in line:
+                line = line.split(">")
+                pot = line[1]
+                update_ui()
             else:
                 print(f"Unknown data request: {line}")
         elif line.startswith("(I)") or line.startswith(" (I)"):
@@ -57,28 +86,35 @@ def handle_data(s, data):
             line = line.replace("(I)", "").strip()
             chat_display.insert(tk.END, f"Server: {data}\n")
             chat_display.yview(tk.END)
-        elif line.startswith("(C)") or line.startswith(" (C)"):
+
+        elif line.startswith("(C)"):
             # The server is requesting input from the user
-            line = line.replace("(C)", "").strip()
-            # For now, just show the information to the user
+            line = line.replace("(C)-", "").strip()
             chat_display.insert(tk.END, f"Server: {data}\n")
             chat_display.yview(tk.END)
+            toggle_visibility(1)
 
 def on_fold():
-    print("Fold")
+    global s
+    toggle_visibility(0)
+    s.send("-1".encode())
 
 def on_call():
-    print("Call")
+    global s
+    toggle_visibility(0)
+    s.send("0".encode())
 
 def on_raise():
     raise_amount = raise_slider.get()
-    print(f"Raise by {raise_amount}")
+    toggle_visibility(0)
+    s.send(raise_amount.encode())
 
 def change_bg_color(new_color):
     main_frame.config(bg=new_color)
 
 def send_message():
     global s
+    toggle_visibility(0)
     message = chat_input.get()
     chat_display.insert(tk.END, f"You: {message}\n")
     chat_input.delete(0, tk.END)
@@ -90,7 +126,6 @@ def send_message():
             chat_display.insert(tk.END, "Failed to send message. Connection might be closed.\n")
 
 ## GUI
-
 def save_name():
     global player_name
     player_name = name_entry.get()
@@ -108,6 +143,7 @@ def start_game():
     ready_label.grid_remove()
     yes_button.grid_remove()
     main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))  # Show the main frame
+    toggle_visibility(0)
 
 # Initialize Tkinter window
 root = tk.Tk()
@@ -137,7 +173,7 @@ main_frame.grid_remove()
 player_label = ttk.Label(main_frame, text=player_name)
 player_label.grid(row=0, column=0, sticky=tk.W)
 
-pot_label = ttk.Label(main_frame, text="Pot: 100")
+pot_label = ttk.Label(main_frame, text=f"Pot: {pot}")
 pot_label.grid(row=0, column=2, sticky=tk.EW)
 
 balance_label = ttk.Label(main_frame, text="Balances:")
@@ -164,8 +200,14 @@ def update_cards(cards, row, starting_column=0):
             card_label.grid(row=row, column=starting_column + idx)
 
 def update_ui():
-    global balances, cards_on_table, cards_for_player
+    global balances, cards_on_table, cards_for_player, pot_label, pot
+    print("Updating UI")
     update_balances(balances)
+    pot_label["text"] = f"Pot: {pot}"
+    # Clear cards, just the cards
+    for widget in main_frame.grid_slaves():
+        if widget.grid_info()["row"] == 1:
+            widget.grid_remove()
     update_cards(cards_on_table, 1)
     update_cards(cards_for_player, 2)
 
@@ -204,17 +246,23 @@ send_button.grid(row=5, column=3, sticky=tk.W)
 input_bar_widgets = [chat_input, send_button]
 action_buttons = [call_button, raise_button, raise_slider, fold_button]
 
-def toggle_visibility():
-    new_state = 'normal' if fold_button.winfo_viewable() == 0 else 'hidden'
+def toggle_visibility(visibile):
+    if visibile == 0:
+        new_state = 'hidden'
+    else:
+        new_state = 'normal'
+    #new_state = 'normal' if fold_button.winfo_viewable() == 0 else 'hidden'
     for widget in input_bar_widgets + action_buttons:
         if new_state == 'hidden':
             widget.grid_remove()
+            change_bg_color("black")
         else:
             widget.grid()
+            change_bg_color("green")
 
 # Button to change background color and a text field for the color
-change_color_button = ttk.Button(main_frame, text="Change BG Color", command=change_bg_color)
-change_color_button.grid(row=6, column=1, sticky=tk.W)
+#change_color_button = ttk.Button(main_frame, text="Change BG Color", command=change_bg_color)
+#change_color_button.grid(row=6, column=1, sticky=tk.W)
 
 ## End of GUI
 

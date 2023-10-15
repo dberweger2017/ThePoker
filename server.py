@@ -22,7 +22,7 @@ blind = 10
 
 def next_phase():
     global current_phase
-    phases = ["starting", "waiting", "gamesetup", "bet"]
+    phases = ["starting", "waiting", "gamesetup", "bet", "determinwinner"]
     next_phase = phases[phases.index(current_phase) + 1]
     print(f"Changing phase {current_phase} -> {next_phase}")
     current_phase = next_phase
@@ -34,16 +34,18 @@ def notify_admin(message, command=False):
                 msg = f"(C)-{message}\n" if command else f"(I)-{message}\n"
                 client_data['connection'].send(msg.encode())
 
-def notify_players(message):
+def notify_players(message, text=True):
     with clients_lock:
         for client_data in clients.values():
             if client_data['type'] == 'client':
-                client_data['connection'].send(f"(I)-{message}\n".encode())
+                if text:
+                    client_data['connection'].send(f"(I)-{message}\n".encode())
+                else:
+                    client_data['connection'].send(f"(D)-{message}\n".encode())
 
-def notify_player(client_id, message, command=False):
+def notify_player(client_id, message):
     with clients_lock:
-        msg = f"(C)-{message}\n" if command else f"(I)-{message}\n"
-        clients[client_id]['connection'].send(msg.encode())
+        clients[client_id]['connection'].send(message.encode())
 
 def handle_socket_errors(func):
     def wrapper(client_id, *args, **kwargs):
@@ -96,7 +98,7 @@ def receive_data(conn, timeout=1):
 
 def proceed_to_next_turn():
     print("Passing to new turn")
-    global current_turn, game
+    global current_turn, game, players
     player_ids = game.getOrder()
     current_index = player_ids.index(current_turn)
 
@@ -105,7 +107,10 @@ def proceed_to_next_turn():
         game.round += 1
         current_turn = player_ids[0]
     else:
-        current_turn = player_ids[current_index + 1]
+        while True:
+            current_turn = player_ids[current_index + 1]
+            if players[current_turn].folded == False:
+                break
 
 def handle_player(conn, client_id):
     global current_phase, current_turn, game
@@ -145,7 +150,7 @@ def handle_player(conn, client_id):
             if client_id == current_turn:
                 print(f"Player {client_id} is betting, this player is {game.players[game.getPlayerIndex(client_id)].type}")
                 notify_players(f"Waiting for player {client_id} to bet...")
-                notify_player(client_id, f"Your balance is {players[client_id].balance}$\n")
+                notify_player(client_id, f"(I)-Your balance is {players[client_id].balance}$\n")
                 legal_bet = True
                 if client_id == game.smallBlind and game.round == 1:
                     bet = game.blindBet
@@ -156,24 +161,43 @@ def handle_player(conn, client_id):
                 else:
                     legal_bet = False
                     while not legal_bet:
-                        notify_player(client_id, f"How much do you want to bet? (minbet: {game.minTableBet}$, -1 to leave)", command=True)
+                        notify_player(client_id, f"(C)-How much do you want to bet? (minbet: {game.minTableBet}$, -1 to leave)")
                         bet_str = receive_data(conn)
                         try:
                             bet = int(bet_str)
                         except ValueError:
-                            notify_player(client_id, f"Invalid bet {bet_str}\n")
+                            notify_player(client_id, f"(I)-Invalid bet {bet_str}\n")
                             continue
+
+                        if bet == 0:
+                            bet = game.minTableBet
+
+                        if bet == game.minTableBet:
+                            players[client_id].called = True
+                            notify_admin(f"Player {client_id} called")
+
+                        # Cases
+                        if bet < game.minTableBet and bet != -1:
+                            notify_player(client_id, f"(I)-You must bet at least {game.minTableBet}$\n")
                         
-                        if bet < game.minTableBet:
-                            notify_player(client_id, f"You must bet at least {game.minTableBet}$\n")
                         elif bet > players[client_id].balance:
-                            notify_player(client_id, f"You don't have enough money (money: {players[client_id].balance})\n")
+                            notify_player(client_id, f"(I)You don't have enough money (money: {players[client_id].balance})\n")
+                        
                         elif bet <= players[client_id].balance:
                             # This is including the case where bet == -1
                             legal_bet = True
                     
                 if legal_bet:
                     if bet != -1:
+                        if bet > game.minTableBet:
+                            # Player raises, reset the called flag
+                            for player in game.players:
+                                player.called = False
+                            players[client_id].called = True
+
+                            game.minTableBet = bet
+                        
+                        # Handle bet
                         print(f"Player {client_id} bet {bet}$")
                         notify_admin(f"Player {client_id} bet {bet}$")
                         notify_players(f"Player {client_id} bet {bet}$")
@@ -181,13 +205,29 @@ def handle_player(conn, client_id):
                         # Update player balance
                         players[client_id].balance -= bet
                         game.pot += bet
-                        game.minTableBet = bet
+
+                        # Update player data
+                        notify_players(f"{str(players[client_id])}={players[client_id].balance}",text=False)
+                        notify_players(f"pot>{game.pot}",text=False)
 
                         notify_players(f"Balance of {client_id} is {players[client_id].balance}$\n")
                         notify_players(f"Pot is {game.pot}$\n")
 
-                    notify_players("n")
-                    proceed_to_next_turn()
+                    else:
+                        # Player folds
+                        print(f"Player {client_id} folded")
+                        notify_admin(f"Player {client_id} folded")
+                        notify_players(f"Player {client_id} folded")
+                        players[client_id].folded = True
+
+                    #if everyone except one player has folded, that player wins
+                    if len(game.players) - 1 == sum([player.folded for player in game.players]):
+                        notify_players(f"Player {client_id} wins!")
+                        next_phase()
+                        continue
+                    else:
+                        proceed_to_next_turn()
+    
             else:
                 time.sleep(1)
 
@@ -207,22 +247,25 @@ def handle_game():
             pastReady = all_ready
 
     if current_phase == "gamesetup":
-        notify_players("clear")
         notify_players("Determining the button: ")
         game = Game(list(players.values()))
         button, cards = game.start()
         rounds = len(cards)
         for i, round in enumerate(cards):
+            for player_id, card in round: 
+                notify_player(player_id, f"(I)-Your card is {card}\n")
+                notify_player(player_id, f"(D)-hand:{card.id}")
+            time.sleep(5)
             for player_id, card in round:
-                notify_player(player_id, f"Your card is {card}")
-            time.sleep(2)
-            for player_id, card in round:
-                notify_players(f"{player_id} got card {card}")
+                notify_players(f"{player_id} got card {card}\n")
+                notify_players(f"table:{card.id}", text=False)
                 time.sleep(1)
             if rounds > 1:
                 if i + 1 < rounds:
                     notify_players(f"There is a tie!")
-                    time.sleep(1)
+                    time.sleep(3)
+                    notify_players("hand:-1", text=False)
+                    notify_players("table:-1", text=False)
 
         time.sleep(3)
 
@@ -234,21 +277,72 @@ def handle_game():
         time.sleep(1)
         notify_players("Starting game in 1s...")
         time.sleep(1)
-        notify_players("clear")
         
         notify_players(f"The order of the game is {' -> '.join([str(item) for item in game.getOrder()])}")
-        notify_players("n")
 
         game.reset()
+        notify_players("hand:-1", text=False)
+        notify_players("table:-1", text=False)
         next_phase()
         
     if current_phase == "bet":
         for player in game.players:
             player.hand.append(game.deck.drawCard())
             player.hand.append(game.deck.drawCard())
-            notify_player(player.playerId, f"Your hand is {' '.join([str(card) for card in player.hand])}")
+            notify_player(player.playerId, f"(I)-Your hand is {' '.join([str(card) for card in player.hand])}")
+            notify_players(f"{str(player)}={player.balance}",text=False)
+            for card in player.hand:
+                notify_player(player.playerId, f"(D)-hand:{card.id}\n")
+        
         current_turn = game.getOrder()[0]
         print(game.smallBlind, game.bigBlind)
+    
+    while current_phase == "bet":
+        # check if the amount of players that have called plus the amount of players that have folded is equal to the amount of players
+        amount_called = 0
+        amount_folded = 0
+        for player in game.players:
+            if player.folded:
+                amount_folded += 1
+            elif player.called: # if the player has folded, they can't call
+                amount_called += 1
+            
+        if amount_called + amount_folded == len(game.players):
+            notify_admin("All players have called")
+            notify_players("All players have called")
+            print("All players have called")
+            
+            # reset the called flag for all players
+            for player in game.players:
+                player.called = False
+
+            if len(game.table) == 0:
+                print("Showing first three cards")
+                game.table.append(game.deck.drawCard())
+                game.table.append(game.deck.drawCard())
+                game.table.append(game.deck.drawCard())
+                notify_players(f"table:{game.table[-1].id}", text=False)
+                notify_players(f"table:{game.table[-2].id}", text=False)
+                notify_players(f"table:{game.table[-3].id}", text=False)
+            elif len(game.table) == 3:
+                print("Showing fourth card")
+                game.table.append(game.deck.drawCard())
+                notify_players(f"table:{game.table[-1].id}", text=False)
+            elif len(game.table) == 4:
+                print("Showing fifth card")
+                game.table.append(game.deck.drawCard())
+                notify_players(f"table:{game.table[-1].id}", text=False)
+            elif len(game.table) == 5:
+                notify_players("All cards have been drawn")
+                next_phase()
+                continue
+        else:
+            print(f"Amount called: {amount_called}, amount folded: {amount_folded}, total players: {len(game.players)}")
+            time.sleep(1)
+
+    if current_phase == "determinwinner":
+        print("Determining winner")
+        notify_players("Determining winner")
         pass
 
 if __name__ == "__main__":

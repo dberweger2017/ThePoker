@@ -8,6 +8,7 @@ class Game():
         self.deck.shuffle()
         self.pot = 0
         self.round = 1
+        self.table = []
 
         self.blindBet = 10
         self.minTableBet = 0
