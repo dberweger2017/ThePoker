@@ -90,9 +90,14 @@ def handle_data(s, data):
         elif line.startswith("(C)"):
             # The server is requesting input from the user
             line = line.replace("(C)-", "").strip()
-            chat_display.insert(tk.END, f"Server: {data}\n")
-            chat_display.yview(tk.END)
-            toggle_visibility(1)
+            if line == "Are you ready to start the game? (y/n)":
+                global ready_label, yes_button
+                ready_label.grid(row=0, column=0, columnspan=2)
+                yes_button.grid(row=0, column=2)
+            else:
+                chat_display.insert(tk.END, f"Server: {data}\n")
+                chat_display.yview(tk.END)
+                toggle_visibility(1)
 
 def on_fold():
     global s
@@ -163,6 +168,9 @@ save_button.grid(row=0, column=1)
 
 ready_label = ttk.Label(root, text="Are you ready to start the game?")
 yes_button = ttk.Button(root, text="Yes", command=start_game)
+
+ready_label.grid_remove()
+yes_button.grid_remove()
 
 # Create frames
 main_frame = tk.Frame(root, bg="white", padx=10, pady=10)

@@ -11,6 +11,9 @@ import sys
 HOST = 'localhost'
 PORT = 8000
 
+fast_game = False
+delay = 1
+
 clients = {}
 players = {}
 clients_lock = Lock()
@@ -99,18 +102,26 @@ def receive_data(conn, timeout=1):
 def proceed_to_next_turn():
     print("Passing to new turn")
     global current_turn, game, players
+
     player_ids = game.getOrder()
     current_index = player_ids.index(current_turn)
 
+    next_index = current_index + 1
+
+    print(player_ids)
+    print(current_index)
+    print(next_index)
+
     # Check if all players have made their bet
-    if current_index + 1 == len(player_ids):
+    if next_index == len(player_ids):
         game.round += 1
         current_turn = player_ids[0]
+        if players[current_turn].folded:
+            proceed_to_next_turn()
     else:
-        while True:
-            current_turn = player_ids[current_index + 1]
-            if players[current_turn].folded == False:
-                break
+        current_turn = player_ids[next_index]
+        if players[current_turn].folded:
+            proceed_to_next_turn()
 
 def handle_player(conn, client_id):
     global current_phase, current_turn, game
@@ -173,8 +184,9 @@ def handle_player(conn, client_id):
                             bet = game.minTableBet
 
                         if bet == game.minTableBet:
-                            players[client_id].called = True
-                            notify_admin(f"Player {client_id} called")
+                            if not (client_id == game.bigBlind and game.round == 1):
+                                print(f"---Setting this player as called: {client_id}")
+                                players[client_id].called = True
 
                         # Cases
                         if bet < game.minTableBet and bet != -1:
@@ -187,24 +199,34 @@ def handle_player(conn, client_id):
                             # This is including the case where bet == -1
                             legal_bet = True
                     
+                    
                 if legal_bet:
                     if bet != -1:
                         if bet > game.minTableBet:
                             # Player raises, reset the called flag
                             for player in game.players:
+                                print("Resetting calls")
                                 player.called = False
-                            players[client_id].called = True
+                            if not (client_id == game.bigBlind and game.round == 1):
+                                print(f"---Setting this player as called: {client_id}")
+                                players[client_id].called = True
 
                             game.minTableBet = bet
-                        
-                        # Handle bet
-                        print(f"Player {client_id} bet {bet}$")
-                        notify_admin(f"Player {client_id} bet {bet}$")
-                        notify_players(f"Player {client_id} bet {bet}$")
 
                         # Update player balance
-                        players[client_id].balance -= bet
-                        game.pot += bet
+                        delta = bet - players[client_id].bet
+                        players[client_id].balance -= delta
+                        players[client_id].bet = bet
+                        game.pot += delta
+
+                        if delta != 0:
+                            print(f"Player {client_id} bet {bet}$")
+                            notify_admin(f"Player {client_id} bet {bet}$")
+                            notify_players(f"Player {client_id} bet {bet}$")
+                        else:
+                            print(f"Player {client_id} called")
+                            notify_admin(f"Player {client_id} called")
+                            notify_players(f"Player {client_id} called")
 
                         # Update player data
                         notify_players(f"{str(players[client_id])}={players[client_id].balance}",text=False)
@@ -222,12 +244,20 @@ def handle_player(conn, client_id):
 
                     #if everyone except one player has folded, that player wins
                     if len(game.players) - 1 == sum([player.folded for player in game.players]):
-                        notify_players(f"Player {client_id} wins!")
                         next_phase()
                         continue
                     else:
+                        # Update the admin on the current state of the game
+                        notify_admin(f"Current pot: {game.pot}$")
+                        notify_admin(f"Current table bet: {game.minTableBet}$")
+                        notify_admin(f"Current turn: {current_turn}")
+                        notify_admin(f"Current table: {game.table}")
+                        for player in game.players:
+                            if player.folded:
+                                notify_admin(f"Player {str(player)} {player.playerId} is folded")
+                            else:
+                                notify_admin(f"Player {str(player)} {player.playerId} is in the game")
                         proceed_to_next_turn()
-    
             else:
                 time.sleep(1)
 
@@ -343,7 +373,9 @@ def handle_game():
     if current_phase == "determinwinner":
         print("Determining winner")
         notify_players("Determining winner")
-        pass
+        winner = game.determineWinner()
+        notify_players(f"The winner is {winner}")
+        notify_admin(f"The winner is {winner}")
 
 if __name__ == "__main__":
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -353,6 +385,9 @@ if __name__ == "__main__":
     except OSError as e:
         print("Server is probably running.")
         print(e)
+        # close all connections
+        for client in clients.values():
+            client['connection'].close()
         print("Exiting...")
         sys.exit(0)
 

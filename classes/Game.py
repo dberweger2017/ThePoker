@@ -1,4 +1,5 @@
 from classes.Deck import Deck
+import random
 
 class Game():
     def __init__(self, players):
@@ -94,6 +95,15 @@ class Game():
         self.stage = 1
         self.deck = Deck()
         self.deck.shuffle()
+
+    def determineWinner(self):
+        players_to_determin = [player for player in self.players if not player.folded]
+        if len(players_to_determin) == 1:
+            return players_to_determin[0]
+        else:
+            # pick a random winner
+            print("Logic not finished, returning random")
+            return random.choice(players_to_determin)
     
     def __str__(self):
         return f"Game with {len(self.players)} players, on stage: {self.getStage()}"
