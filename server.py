@@ -183,15 +183,16 @@ def handle_player(conn, client_id):
                             notify_player(client_id, f"(I)-Invalid bet {bet_str}\n")
                             continue
 
-                        if bet == 0:
-                            bet = game.minTableBet
+                        bet += players[client_id].bet
+
+                        #if bet == 0:
+                        #    bet = game.minTableBet
+                        
 
                         if bet == game.minTableBet:
                             if not (client_id == game.bigBlind and game.round == 1):
                                 print(f"---Setting this player as called: {client_id}")
                                 players[client_id].called = True
-
-                        bet += players[client_id].bet
 
                         # Cases
                         if bet < game.minTableBet and bet != -1 and bet != players[client_id].balance:
