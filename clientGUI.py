@@ -118,8 +118,7 @@ def on_call():
 def on_raise():
     raise_amount = raise_slider.get()
     toggle_visibility(0)
-    s.send(raise_amount.encode())
-    print(f"Raise amount: {raise_amount}")
+    s.send(str(raise_amount).encode())
 
 def change_bg_color(new_color):
     main_frame.config(bg=new_color)
