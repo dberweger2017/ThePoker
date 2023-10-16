@@ -71,9 +71,10 @@ class Game():
             # Otherwise, continue with only the players who had the highest cards
             player_ids = [card[0] for card in highest_cards]
 
-    def changeButton(self, button):
+    def changeButton(self, button, button_index = None):
         #Rotates the players so that the button is last
-        button_index = [player.playerId for player in self.players].index(button)
+        if button_index == None:
+            button_index = [player.playerId for player in self.players].index(button)
         self.players = self.players[button_index+1:] + self.players[:button_index+1]
         
         self.players[0].type = "smallblind"
@@ -90,19 +91,34 @@ class Game():
         winner, tries = self.determineButton()
         self.changeButton(winner)
         return winner, tries
-
-    def reset(self):
+    
+    def reset(self, winner = None):
         self.stage = 1
         self.deck = Deck()
         self.deck.shuffle()
+        self.pot = 0
+        self.round = 1
+        self.minTableBet = 0
+        self.table = []
+        for player in self.players:
+            player.hand = []
+            player.bet = 0
+            player.called = False
+            player.folded = False
+        if winner != None:
+            winner = self.players[winner]
+            self.changeButton(None, self.getPlayerIndex(winner.playerId))
 
     def determineWinner(self):
-        players_to_determin = [player for player in self.players if not player.folded]
-        if len(players_to_determin) == 1:
-            return players_to_determin[0]
+        players_to_determine = [player for player in self.players if not player.folded]        
+        if len(players_to_determine) == 1:
+            print("Returning the only player left")
+            winner = players_to_determine[0]
+            return self.getPlayerIndex(winner.playerId), winner
         else:
             print("Logic not finished, returning random")
-            return random.choice(players_to_determin)
+            winner = random.choice(players_to_determine)
+            return self.getPlayerIndex(winner.playerId), winner
     
     def __str__(self):
         return f"Game with {len(self.players)} players, on stage: {self.getStage()}"

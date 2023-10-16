@@ -23,8 +23,11 @@ current_phase = "starting"
 game = None
 blind = 10
 
-def next_phase():
+def next_phase(reset = False):
     global current_phase
+    if reset:
+        current_phase = "bet"
+        return
     phases = ["starting", "waiting", "gamesetup", "bet", "determinwinner"]
     next_phase = phases[phases.index(current_phase) + 1]
     print(f"Changing phase {current_phase} -> {next_phase}")
@@ -266,116 +269,127 @@ def handle_game():
     print("i. Server ready to start game")
     next_phase()
     pastReady = False
-    while current_phase == "waiting":
-        if len(players) != 0:
-            all_ready = all(player.isReady for player in players.values())
-            if all_ready and not pastReady:
-                notify_admin("All players are ready.")
-                notify_admin("Start the game? (y/n)", command=True)
-            else:
-                time.sleep(1)
-            pastReady = all_ready
+    while True:
+        while current_phase == "waiting":
+            if len(players) != 0:
+                all_ready = all(player.isReady for player in players.values())
+                if all_ready and not pastReady:
+                    notify_admin("All players are ready.")
+                    notify_admin("Start the game? (y/n)", command=True)
+                else:
+                    time.sleep(1)
+                pastReady = all_ready
 
-    if current_phase == "gamesetup":
-        notify_players("Determining the button: ")
-        game = Game(list(players.values()))
-        button, cards = game.start()
-        rounds = len(cards)
-        for i, round in enumerate(cards):
-            for player_id, card in round: 
-                notify_player(player_id, f"(I)-Your card is {card}\n")
-                notify_player(player_id, f"(D)-hand:{card.id}")
-            time.sleep(5)
-            for player_id, card in round:
-                notify_players(f"{player_id} got card {card}\n")
-                notify_players(f"table:{card.id}", text=False)
-                time.sleep(1)
-            if rounds > 1:
-                if i + 1 < rounds:
-                    notify_players(f"There is a tie!")
-                    time.sleep(3)
-                    notify_players("hand:-1", text=False)
-                    notify_players("table:-1", text=False)
+        if current_phase == "gamesetup":
+            notify_players("Determining the button: ")
+            game = Game(list(players.values()))
+            button, cards = game.start()
+            rounds = len(cards)
+            for i, round in enumerate(cards):
+                for player_id, card in round: 
+                    notify_player(player_id, f"(I)-Your card is {card}\n")
+                    notify_player(player_id, f"(D)-hand:{card.id}")
+                time.sleep(5)
+                for player_id, card in round:
+                    notify_players(f"{player_id} got card {card}\n")
+                    notify_players(f"table:{card.id}", text=False)
+                    time.sleep(1)
+                if rounds > 1:
+                    if i + 1 < rounds:
+                        notify_players(f"There is a tie!")
+                        time.sleep(3)
+                        notify_players("hand:-1", text=False)
+                        notify_players("table:-1", text=False)
 
-        time.sleep(3)
+            time.sleep(3)
 
-        notify_players(f"The button is {button}!!")
+            notify_players(f"The button is {button}!!")
 
-        notify_players("Starting game in 3s...")
-        time.sleep(1)
-        notify_players("Starting game in 2s...")
-        time.sleep(1)
-        notify_players("Starting game in 1s...")
-        time.sleep(1)
-        
-        notify_players(f"The order of the game is {' -> '.join([str(item) for item in game.getOrder()])}")
-
-        game.reset()
-        notify_players("hand:-1", text=False)
-        notify_players("table:-1", text=False)
-        next_phase()
-        
-    if current_phase == "bet":
-        for player in game.players:
-            player.hand.append(game.deck.drawCard())
-            player.hand.append(game.deck.drawCard())
-            notify_player(player.playerId, f"(I)-Your hand is {' '.join([str(card) for card in player.hand])}")
-            notify_players(f"{str(player)}={player.balance}",text=False)
-            for card in player.hand:
-                notify_player(player.playerId, f"(D)-hand:{card.id}\n")
-        
-        current_turn = game.getOrder()[0]
-        print(game.smallBlind, game.bigBlind)
-    
-    while current_phase == "bet":
-        # check if the amount of players that have called plus the amount of players that have folded is equal to the amount of players
-        amount_called = 0
-        amount_folded = 0
-        for player in game.players:
-            if player.folded:
-                amount_folded += 1
-            elif player.called: # if the player has folded, they can't call
-                amount_called += 1
+            notify_players("Starting game in 3s...")
+            time.sleep(3)
             
-        if amount_called + amount_folded == len(game.players):
-            notify_admin("All players have called")
-            notify_players("All players have called")
-            print("All players have called")
+            notify_players(f"The order of the game is {' -> '.join([str(item) for item in game.getOrder()])}")
+
+            game.reset()
+
+            notify_players("hand:-1", text=False)
+            notify_players("table:-1", text=False)
+            next_phase()
             
-            # reset the called flag for all players
+        if current_phase == "bet":
             for player in game.players:
-                player.called = False
+                player.hand.append(game.deck.drawCard())
+                player.hand.append(game.deck.drawCard())
+                notify_player(player.playerId, f"(I)-Your hand is {' '.join([str(card) for card in player.hand])}")
+                notify_players(f"{str(player)}={player.balance}",text=False)
+                for card in player.hand:
+                    notify_player(player.playerId, f"(D)-hand:{card.id}\n")
+            
+            current_turn = game.getOrder()[0]
+            print(game.smallBlind, game.bigBlind)
+        
+        while current_phase == "bet":
+            # check if the amount of players that have called plus the amount of players that have folded is equal to the amount of players
+            amount_called = 0
+            amount_folded = 0
+            for player in game.players:
+                if player.folded:
+                    amount_folded += 1
+                elif player.called: # if the player has folded, they can't call
+                    amount_called += 1
+                
+            if amount_called + amount_folded == len(game.players) or amount_folded == len(game.players) - 1:
+                notify_admin("All players have called")
+                notify_players("All players have called")
+                print("All players have called")
+                
+                # reset the called flag for all players
+                for player in game.players:
+                    player.called = False
 
-            if len(game.table) == 0:
-                print("Showing first three cards")
-                game.table.append(game.deck.drawCard())
-                game.table.append(game.deck.drawCard())
-                game.table.append(game.deck.drawCard())
-                notify_players(f"table:{game.table[-1].id}", text=False)
-                notify_players(f"table:{game.table[-2].id}", text=False)
-                notify_players(f"table:{game.table[-3].id}", text=False)
-            elif len(game.table) == 3:
-                print("Showing fourth card")
-                game.table.append(game.deck.drawCard())
-                notify_players(f"table:{game.table[-1].id}", text=False)
-            elif len(game.table) == 4:
-                print("Showing fifth card")
-                game.table.append(game.deck.drawCard())
-                notify_players(f"table:{game.table[-1].id}", text=False)
-            elif len(game.table) == 5:
-                notify_players("All cards have been drawn")
-                next_phase()
-                continue
-        else:
-            print(f"Amount called: {amount_called}, amount folded: {amount_folded}, total players: {len(game.players)}")
-            time.sleep(1)
+                if len(game.table) == 0:
+                    print("Showing first three cards")
+                    game.table.append(game.deck.drawCard())
+                    game.table.append(game.deck.drawCard())
+                    game.table.append(game.deck.drawCard())
+                    notify_players(f"table:{game.table[-1].id}", text=False)
+                    notify_players(f"table:{game.table[-2].id}", text=False)
+                    notify_players(f"table:{game.table[-3].id}", text=False)
+                elif len(game.table) == 3:
+                    print("Showing fourth card")
+                    game.table.append(game.deck.drawCard())
+                    notify_players(f"table:{game.table[-1].id}", text=False)
+                elif len(game.table) == 4:
+                    print("Showing fifth card")
+                    game.table.append(game.deck.drawCard())
+                    notify_players(f"table:{game.table[-1].id}", text=False)
+                elif len(game.table) == 5:
+                    notify_players("All cards have been drawn")
+                    next_phase()
+                    continue
+            else:
+                print(f"Amount called: {amount_called}, amount folded: {amount_folded}, total players: {len(game.players)}")
+                time.sleep(1)
 
-    if current_phase == "determinwinner":
-        print("Determining winner")
-        notify_players("Determining winner")
-        winner = game.determineWinner()
-        notify_players(f"The winner is {winner}")
-        notify_admin(f"The winner is {winner}")
+        if current_phase == "determinwinner":
+            print("Determining winner")
+            notify_players("Determining winner")
+            inx, winner = game.determineWinner()
+            print(f"The winner is {winner}")
+            notify_players(f"The winner is {winner}")
+            notify_admin(f"The winner is {winner}")
+
+            # Im not sure if it retuns a copy of the player or a reference to the player
+            game.players[inx].balance += game.pot
+
+            notify_players(f"{str(game.players[inx])}={game.players[inx].balance}",text=False)
+
+            game.pot = 0
+            game.reset(inx)
+            notify_players("hand:-1", text=False)
+            notify_players("table:-1", text=False)
+            time.sleep(3)
+            next_phase(reset = True)
 
 if __name__ == "__main__":
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
