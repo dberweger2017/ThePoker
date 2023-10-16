@@ -219,6 +219,8 @@ def handle_player(conn, client_id):
 
                             game.minTableBet = bet
 
+                        bet -= players[client_id].bet
+
                         # Update player balance
                         delta = bet - players[client_id].bet
                         players[client_id].balance -= delta
