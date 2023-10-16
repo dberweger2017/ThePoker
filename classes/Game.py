@@ -101,7 +101,6 @@ class Game():
         if len(players_to_determin) == 1:
             return players_to_determin[0]
         else:
-            # pick a random winner
             print("Logic not finished, returning random")
             return random.choice(players_to_determin)
     
