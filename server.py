@@ -191,6 +191,8 @@ def handle_player(conn, client_id):
                                 print(f"---Setting this player as called: {client_id}")
                                 players[client_id].called = True
 
+                        bet += players[client_id].bet
+
                         # Cases
                         if bet < game.minTableBet and bet != -1 and bet != players[client_id].balance:
                             notify_player(client_id, f"(I)-You must bet at least {game.minTableBet}$\n")
