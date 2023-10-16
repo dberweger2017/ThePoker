@@ -119,6 +119,7 @@ def on_raise():
     raise_amount = raise_slider.get()
     toggle_visibility(0)
     s.send(raise_amount.encode())
+    print(f"Raise amount: {raise_amount}")
 
 def change_bg_color(new_color):
     main_frame.config(bg=new_color)
@@ -270,7 +271,7 @@ call_button.grid(row=4, column=1)
 raise_button = ttk.Button(main_frame, text="Raise", command=on_raise)
 raise_button.grid(row=4, column=2)
 
-raise_slider = tk.Scale(main_frame, from_=0, to=100, orient=tk.HORIZONTAL,
+raise_slider = tk.Scale(main_frame, from_=20, to=1000, orient=tk.HORIZONTAL,
                         sliderlength=30, width=20, troughcolor='grey',
                         background='lightgrey')
 raise_slider.grid(row=4, column=3)
