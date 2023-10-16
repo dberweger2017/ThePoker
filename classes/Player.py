@@ -9,6 +9,7 @@ class Player():
         self.name = None
         self.called = False
         self.folded = False
+        self.allIn = False
 
     def receive(self, card):
         self.hand.append(card)

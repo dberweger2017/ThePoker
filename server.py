@@ -192,10 +192,10 @@ def handle_player(conn, client_id):
                                 players[client_id].called = True
 
                         # Cases
-                        if bet < game.minTableBet and bet != -1:
+                        if bet < game.minTableBet and bet != -1 and bet != players[client_id].balance:
                             notify_player(client_id, f"(I)-You must bet at least {game.minTableBet}$\n")
                         
-                        elif bet > players[client_id].balance:
+                        elif bet - players[client_id].bet > players[client_id].balance and bet != players[client_id].balance:
                             notify_player(client_id, f"(I)You don't have enough money (money: {players[client_id].balance})\n")
                         
                         elif bet <= players[client_id].balance:
