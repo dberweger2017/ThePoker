@@ -12,7 +12,7 @@ HOST = '0.0.0.0'
 PORT = 8000
 
 fast_game = False
-delay = 1
+delay = 0.1
 
 clients = {}
 players = {}
@@ -289,24 +289,24 @@ def handle_game():
                 for player_id, card in round: 
                     notify_player(player_id, f"(I)-Your card is {card}\n")
                     notify_player(player_id, f"(D)-hand:{card.id}")
-                time.sleep(5)
+                time.sleep(delay*5)
                 for player_id, card in round:
                     notify_players(f"{player_id} got card {card}\n")
                     notify_players(f"table:{card.id}", text=False)
-                    time.sleep(1)
+                    time.sleep(delay)
                 if rounds > 1:
                     if i + 1 < rounds:
                         notify_players(f"There is a tie!")
-                        time.sleep(3)
+                        time.sleep(delay*3)
                         notify_players("hand:-1", text=False)
                         notify_players("table:-1", text=False)
 
-            time.sleep(3)
+            time.sleep(delay*3)
 
             notify_players(f"The button is {button}!!")
 
             notify_players("Starting game in 3s...")
-            time.sleep(3)
+            time.sleep(delay*3)
             
             notify_players(f"The order of the game is {' -> '.join([str(item) for item in game.getOrder()])}")
 
@@ -388,7 +388,7 @@ def handle_game():
             game.reset(inx)
             notify_players("hand:-1", text=False)
             notify_players("table:-1", text=False)
-            time.sleep(3)
+            time.sleep(delay*3)
             next_phase(reset = True)
 
 if __name__ == "__main__":
