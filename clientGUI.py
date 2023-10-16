@@ -7,7 +7,7 @@ import sys
 import names
 import os
 
-HOST = 'localhost'
+HOST = '192.168.1.79' # Test the server on your own computer first
 PORT = 8000
 
 s = None
@@ -16,6 +16,12 @@ balances = {}
 cards_on_table = []
 cards_for_player = []
 pot = 0
+
+# For updating the UI
+last_known_balances = None
+last_known_cards_on_table = None
+last_known_cards_for_player = None
+last_known_pot = None
 
 def get_mode():
     return "admin" if sys.argv[1:2] == ["admin"] else "client"
@@ -207,17 +213,43 @@ def update_cards(cards, row, starting_column=0):
             card_label.image = card_img  # Keep a reference
             card_label.grid(row=row, column=starting_column + idx)
 
+# Initialize last known states
+last_known_balances = None
+last_known_cards_on_table = None
+last_known_cards_for_player = None
+last_known_pot = None
+
 def update_ui():
     global balances, cards_on_table, cards_for_player, pot_label, pot
-    print("Updating UI")
-    update_balances(balances)
-    pot_label["text"] = f"Pot: {pot}"
-    # Clear cards, just the cards
-    for widget in main_frame.grid_slaves():
-        if widget.grid_info()["row"] == 1:
-            widget.grid_remove()
-    update_cards(cards_on_table, 1)
-    update_cards(cards_for_player, 2)
+    global last_known_balances, last_known_cards_on_table, last_known_cards_for_player, last_known_pot
+
+    # Check for balance changes
+    if last_known_balances != balances:
+        print("Updating balances")
+        update_balances(balances)
+        last_known_balances = balances.copy() if balances is not None else None
+
+    # Check for pot changes
+    if last_known_pot != pot:
+        print("Updating pot")
+        pot_label["text"] = f"Pot: {pot}"
+        last_known_pot = pot
+
+    # Check for table card changes
+    if last_known_cards_on_table != cards_on_table:
+        print("Updating cards on table")
+        for widget in main_frame.grid_slaves():
+            if widget.grid_info()["row"] == 1:
+                widget.grid_remove()
+        update_cards(cards_on_table, 1)
+        last_known_cards_on_table = cards_on_table.copy() if cards_on_table is not None else None
+
+    # Check for player card changes
+    if last_known_cards_for_player != cards_for_player:
+        print("Updating cards for player")
+        update_cards(cards_for_player, 2)
+        last_known_cards_for_player = cards_for_player.copy() if cards_for_player is not None else None
+
 
 # Chat display
 chat_display = Text(main_frame, wrap=tk.WORD, width=50, height=10)

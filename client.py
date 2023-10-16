@@ -5,7 +5,7 @@ import os
 # clear the terminal
 os.system('cls' if os.name == 'nt' else 'clear')
 
-HOST = 'localhost'
+HOST = '192.168.1.79'
 PORT = 8000
 
 def get_mode():

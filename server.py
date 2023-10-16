@@ -8,7 +8,7 @@ from classes.Player import Player
 import misc.global_var as global_var
 import sys
 
-HOST = 'localhost'
+HOST = '0.0.0.0'
 PORT = 8000
 
 fast_game = False
@@ -368,8 +368,8 @@ def handle_game():
                     next_phase()
                     continue
             else:
-                print(f"Amount called: {amount_called}, amount folded: {amount_folded}, total players: {len(game.players)}")
-                time.sleep(1)
+                #print(f"Amount called: {amount_called}, amount folded: {amount_folded}, total players: {len(game.players)}")
+                time.sleep(0.1)
 
         if current_phase == "determinwinner":
             print("Determining winner")

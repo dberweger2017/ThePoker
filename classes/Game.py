@@ -1,6 +1,7 @@
 from classes.Deck import Deck
 import random
-
+from collections import Counter
+from operator import itemgetter
 class Game():
     def __init__(self, players):
         self.players = players
@@ -109,15 +110,89 @@ class Game():
             winner = self.players[winner]
             self.changeButton(None, self.getPlayerIndex(winner.playerId))
 
+    # Function to evaluate the hand strength and high card
+    def evaluate_hand(self, hand, table):
+        cards = hand + table
+        cards.sort(key=lambda x: x.value, reverse=True)
+        values = [card.value for card in cards]
+        suits = [card.suit for card in cards]
+        
+        # Check for Royal Flush
+        if set(values[:5]) == set([10, 11, 12, 13, 14]) and len(set(suits[:5])) == 1:
+            return 9, 14
+        
+        # Check for Straight Flush
+        for i in range(0, len(cards) - 4):
+            if all(cards[i+j].value == cards[i].value - j for j in range(5)) and len(set(suits[i:i+5])) == 1:
+                return 8, cards[i].value
+        
+        # Check for Four of a Kind
+        count = Counter(values)
+        if 4 in count.values():
+            return 7, [k for k, v in count.items() if v == 4][0]
+        
+        # Check for Full House
+        if 3 in count.values() and 2 in count.values():
+            return 6, [k for k, v in count.items() if v == 3][0]
+        
+        # Check for Flush
+        count = Counter(suits)
+        if 5 in count.values():
+            return 5, max(values)
+        
+        # Check for Straight
+        for i in range(0, len(cards) - 4):
+            if all(cards[i+j].value == cards[i].value - j for j in range(5)):
+                return 4, cards[i].value
+        
+        # Check for Three of a Kind
+        count = Counter(values)
+        if 3 in count.values():
+            return 3, [k for k, v in count.items() if v == 3][0]
+        
+        # Check for Two Pairs
+        if list(count.values()).count(2) == 2:
+            two_pairs = [k for k, v in sorted(count.items(), key=lambda x: x[0], reverse=True) if v == 2]
+            return 2, max(two_pairs)
+        
+        # Check for Pair
+        if 2 in count.values():
+            return 1, [k for k, v in count.items() if v == 2][0]
+        
+        # High Card
+        return 0, max(values)
+
+    def determine_winner(self, players, table):
+        player_scores = []
+        for player in players:
+            if not player.folded:
+                score, high_card = self.evaluate_hand(player.hand, table)
+                player_scores.append((score, high_card, player))
+        
+        player_scores.sort(key=itemgetter(0, 1), reverse=True)
+        
+        # Finding potential winners (same score and high card)
+        top_score, top_high_card = player_scores[0][:2]
+        potential_winners = [player[2] for player in player_scores if player[0] == top_score and player[1] == top_high_card]
+        
+        # If multiple potential winners, pick a random one
+        if len(potential_winners) > 1:
+            winner = random.choice(potential_winners)
+        else:
+            winner = potential_winners[0]
+            
+        return winner
+
     def determineWinner(self):
-        players_to_determine = [player for player in self.players if not player.folded]        
+        players_to_determine = [player for player in self.players if not player.folded]
+        
         if len(players_to_determine) == 1:
             print("Returning the only player left")
             winner = players_to_determine[0]
             return self.getPlayerIndex(winner.playerId), winner
         else:
-            print("Logic not finished, returning random")
-            winner = random.choice(players_to_determine)
+            print("Determining winner based on hand strength")
+            winner = self.determine_winner(players_to_determine, self.table)
             return self.getPlayerIndex(winner.playerId), winner
     
     def __str__(self):
