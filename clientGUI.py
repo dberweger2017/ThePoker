@@ -275,7 +275,7 @@ raise_slider = tk.Scale(main_frame, from_=20, to=1000, orient=tk.HORIZONTAL,
                         sliderlength=30, width=20, troughcolor='grey',
                         background='lightgrey')
 raise_slider.grid(row=4, column=3)
-raise_slider.set(50)
+raise_slider.set(200)
 
 # Chat Input and Send button
 chat_input = ttk.Entry(main_frame, width=30)
